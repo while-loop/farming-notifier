@@ -56,7 +56,7 @@ func DynamoTrigger(e events.DynamoDBEvent) error {
 
 		p := FromDyn(patch)
 		fmt.Printf("got expired patch: %v\n", p)
-		expires[username] = append(expires[username])
+		expires[username] = append(expires[username], p)
 	}
 
 	var wg sync.WaitGroup
@@ -77,7 +77,7 @@ func DynamoTrigger(e events.DynamoDBEvent) error {
 
 		var regions []string
 		for _, p := range patches {
-			regions = append(regions, p.Region)
+			regions = append(regions, p.Region+"/"+p.Type)
 		}
 
 		wg.Add(1)
