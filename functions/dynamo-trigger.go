@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -58,6 +59,7 @@ func DynamoTrigger(e events.DynamoDBEvent) error {
 		expires[username] = append(expires[username])
 	}
 
+	var wg sync.WaitGroup
 	for username, patches := range expires {
 		user, err := dynamoSession().GetItem(&dynamodb.GetItemInput{
 			TableName: aws.String(usersTable),
@@ -78,13 +80,16 @@ func DynamoTrigger(e events.DynamoDBEvent) error {
 			regions = append(regions, p.Region)
 		}
 
-		go sendText(username, user.Item["number"].S, fmt.Sprintf("Your patches on %s are ready to harvest! %v", username, regions))
+		wg.Add(1)
+		sendText(&wg, username, user.Item["number"].S, fmt.Sprintf("Your patches on %s are ready to harvest! %v", username, regions))
 	}
 
+	wg.Wait()
 	return nil
 }
 
-func sendText(username string, number *string, message string) {
+func sendText(wg *sync.WaitGroup, username string, number *string, message string) {
+	defer wg.Done()
 	if number == nil || message == "" {
 		fmt.Printf("unable to send text. empty number or message %v %v\n", number, message)
 		return
