@@ -1,0 +1,92 @@
+service: farming-notifier
+
+app: farming-notifier
+tenant: whileloop
+
+custom: ${file(./.env.yml)} # You can reference the entire file
+
+provider:
+  name: aws
+  runtime: go1.x
+  stage: dev
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:DescribeTable
+        - dynamodb:Query
+        - dynamodb:Scan
+        - dynamodb:GetItem
+        - dynamodb:PutItem
+        - dynamodb:UpdateItem
+        - dynamodb:DeleteItem
+      Resource: "arn:aws:dynamodb:*:*:*"
+
+package:
+ exclude:
+   - ./**
+ include:
+   - ./bin/**
+
+functions:
+  patches:
+    handler: bin/patches
+    events:
+      - http:
+          path: patches
+          method: put
+
+  users:
+    handler: bin/users
+    events:
+      - http:
+          path: users
+          method: put
+
+  dynamo-trigger:
+    handler: bin/dynamo-trigger
+    events:
+      - stream:
+          type: dynamodb
+          batchSize: 1
+          startingPosition: LATEST
+          arn: { "Fn::GetAtt": ["PatchesTable", "StreamArn"] }
+    environment:
+      TWILIO_ACCOUNT_SID: ${self:custom.accountSid}
+      TWILIO_NUMBER: ${self:custom.number}
+      TWILIO_AUTH_TOKEN: ${self:custom.authToken}
+
+resources:
+  Resources:
+    PatchesTable:
+      Type: 'AWS::DynamoDB::Table'
+      DeletionPolicy: Retain
+      Properties:
+        TableName: 'Patches'
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        TimeToLiveSpecification:
+          AttributeName: ttl
+          Enabled: true
+        StreamSpecification:
+          StreamViewType: OLD_IMAGE
+    UsersTable:
+      Type: 'AWS::DynamoDB::Table'
+      DeletionPolicy: Retain
+      Properties:
+        TableName: 'Users'
+        AttributeDefinitions:
+          - AttributeName: username
+            AttributeType: S
+        KeySchema:
+          - AttributeName: username
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
