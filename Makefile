@@ -1,3 +1,4 @@
+AWS_PROFILE=default
 go_apps = bin/patches bin/users bin/dynamo-trigger
 
 bin/% : functions/%.go functions/db.go functions/models.go
