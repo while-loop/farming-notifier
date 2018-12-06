@@ -81,7 +81,7 @@ func DynamoTrigger(e events.DynamoDBEvent) error {
 		}
 
 		wg.Add(1)
-		sendText(&wg, username, user.Item["number"].S, fmt.Sprintf("Your patches on %s are ready to harvest! %v", username, regions))
+		go sendText(&wg, username, user.Item["number"].S, fmt.Sprintf("Your patches on %s are ready to harvest! %v", username, regions))
 	}
 
 	wg.Wait()
