@@ -34,17 +34,26 @@ func NewPatch(item string) (Patch, error) {
 func FromDyn(av map[string]events.DynamoDBAttributeValue) Patch {
 	ttl, err := av["ttl"].Integer()
 	if err != nil {
+		fmt.Printf("err getting ttl: %v", err)
 		ttl = 0
 	}
 
 	return Patch{
-		ID:       av["id"].String(),
-		Username: av["username"].String(),
-		Region:   av["region"].String(),
-		Patch:    av["patch"].String(),
-		Type:     av["type"].String(),
+		ID:       safeString(av["id"]),
+		Username: safeString(av["username"]),
+		Region:   safeString(av["region"]),
+		Patch:    safeString(av["patch"]),
+		Type:     safeString(av["type"]),
 		TTL:      ttl,
 	}
+}
+
+func safeString(av events.DynamoDBAttributeValue) string {
+	if av.IsNull() {
+		return ""
+	}
+
+	return av.String()
 }
 
 const (

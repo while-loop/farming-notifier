@@ -47,14 +47,15 @@ func DynamoTrigger(e events.DynamoDBEvent) error {
 			continue
 		}
 
-		fmt.Println("got expired", patch)
 		username := patch["username"].String()
 		_, exists := expires[username]
 		if !exists {
 			expires[username] = []Patch{}
 		}
 
-		expires[username] = append(expires[username], FromDyn(patch))
+		p := FromDyn(patch)
+		fmt.Printf("got expired patch: %v\n", p)
+		expires[username] = append(expires[username])
 	}
 
 	for username, patches := range expires {

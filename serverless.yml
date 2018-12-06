@@ -47,7 +47,7 @@ functions:
     events:
       - stream:
           type: dynamodb
-          batchSize: 1
+          batchSize: 100
           startingPosition: LATEST
           arn: { "Fn::GetAtt": ["PatchesTable", "StreamArn"] }
     environment:
