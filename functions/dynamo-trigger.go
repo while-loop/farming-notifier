@@ -35,32 +35,37 @@ func DynamoTrigger(e events.DynamoDBEvent) error {
 
 	fmt.Println(string(bs))
 
-	expires := map[string][]Patch{}
+	// map[username][type] = []Patch
+	expires := map[string]map[string][]Patch{}
 
 	for _, event := range e.Records {
 		if event.EventName != removeEvent {
 			continue
 		}
 
-		patch := event.Change.OldImage
-		if patch == nil {
+		p := event.Change.OldImage
+		if p == nil {
 			fmt.Println("no new image found for event", event)
 			continue
 		}
 
-		username := patch["username"].String()
-		_, exists := expires[username]
+		patch := FromDyn(p)
+		_, exists := expires[patch.Username]
 		if !exists {
-			expires[username] = []Patch{}
+			expires[patch.Username] = map[string][]Patch{}
 		}
 
-		p := FromDyn(patch)
-		fmt.Printf("got expired patch: %v\n", p)
-		expires[username] = append(expires[username], p)
+		if patch.TTL == 0 || patch.TTL >= time.Now().Unix() {
+			fmt.Printf("got ttl that was in the future %v\n", patch)
+			continue
+		}
+
+		fmt.Printf("got expired patch: %v\n", patch)
+		expires[patch.Username][patch.Type] = append(expires[patch.Username][patch.Type], patch)
 	}
 
 	var wg sync.WaitGroup
-	for username, patches := range expires {
+	for username, types := range expires {
 		user, err := dynamoSession().GetItem(&dynamodb.GetItemInput{
 			TableName: aws.String(usersTable),
 			Key: map[string]*dynamodb.AttributeValue{
@@ -75,13 +80,18 @@ func DynamoTrigger(e events.DynamoDBEvent) error {
 			continue
 		}
 
-		var regions []string
-		for _, p := range patches {
-			regions = append(regions, p.Region+"/"+p.Type)
+		message := fmt.Sprintf("Your patches on %s are ready to harvest!\n", username)
+		for patchType, patches := range types {
+			var regions []string
+			for _, p := range patches {
+				regions = append(regions, p.Region)
+			}
+
+			message += fmt.Sprintf("\n%s: %v", patchType, regions)
 		}
 
 		wg.Add(1)
-		go sendText(&wg, username, user.Item["number"].S, fmt.Sprintf("Your patches on %s are ready to harvest! %v", username, regions))
+		go sendText(&wg, username, user.Item["number"].S, message)
 	}
 
 	wg.Wait()

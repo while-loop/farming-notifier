@@ -18,7 +18,7 @@ func UpdateUser(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRe
 		return events.APIGatewayProxyResponse{Body: "bad user", StatusCode: http.StatusBadRequest}, nil
 	}
 
-	if update(user, usersTable) != nil {
+	if err = update(user, usersTable); err != nil {
 		fmt.Printf("failed to update user: %v\n", err)
 		return events.APIGatewayProxyResponse{Body: "server error", StatusCode: http.StatusInternalServerError}, nil
 	}

@@ -15,7 +15,7 @@ func UpdatePatch(request events.APIGatewayProxyRequest) (events.APIGatewayProxyR
 		return events.APIGatewayProxyResponse{Body: "bad patch", StatusCode: http.StatusBadRequest}, nil
 	}
 
-	if update(patch, patchesTable) != nil {
+	if err = update(patch, patchesTable); err != nil {
 		fmt.Printf("failed to update patch: %v\n", err)
 		return events.APIGatewayProxyResponse{Body: "server error", StatusCode: http.StatusInternalServerError}, nil
 	}
