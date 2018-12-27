@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/aws/aws-lambda-go/events"
+	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"strings"
 )
 
@@ -57,6 +58,21 @@ func FromDyn(av map[string]events.DynamoDBAttributeValue) Patch {
 		Produce:  safeString(av["produce"]),
 		TTL:      ttl,
 	}
+}
+
+func UserFromDyn(av map[string]*dynamodb.AttributeValue) User {
+	return User{
+		Username: safeAV(av["username"]),
+		Number:   safeAV(av["number"]),
+	}
+}
+
+func safeAV(av *dynamodb.AttributeValue) string {
+	if av == nil  || av.S == nil {
+		return ""
+	}
+
+	return *av.S
 }
 
 func safeString(av events.DynamoDBAttributeValue) string {

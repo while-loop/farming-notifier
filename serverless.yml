@@ -3,6 +3,10 @@ service: farming-notifier
 app: farming-notifier
 tenant: whileloop
 
+# https://serverless.com/blog/serverless-api-gateway-domain/
+plugins:
+  - serverless-domain-manager
+
 custom: ${file(./.env.yml)} # You can reference the entire file
 
 provider:
@@ -41,6 +45,10 @@ functions:
       - http:
           path: users
           method: put
+    environment:
+      TWILIO_ACCOUNT_SID: ${self:custom.accountSid}
+      TWILIO_NUMBER: ${self:custom.number}
+      TWILIO_AUTH_TOKEN: ${self:custom.authToken}
 
   dynamo-trigger:
     handler: bin/dynamo-trigger
